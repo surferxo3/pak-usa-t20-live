@@ -79,6 +79,46 @@
   }
   .match-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 500; }
 
+  /* ── Stream URL bar ── */
+  .url-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .url-bar input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'DM Sans', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .url-bar input::placeholder { color: var(--text-muted); }
+  .url-bar input:focus { border-color: var(--accent); }
+  .url-bar button {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  .url-bar button:hover { opacity: 0.85; }
+
   .live-pill {
     display: flex; align-items: center; gap: 6px;
     background: rgba(255,59,79,0.12);
@@ -466,7 +506,8 @@
 
   /* ── Fullscreen adjustments ── */
   .app.is-fullscreen .top-bar,
-  .app.is-fullscreen .bottom-bar { display: none; }
+  .app.is-fullscreen .bottom-bar,
+  .app.is-fullscreen .url-bar { display: none; }
   .app.is-fullscreen .player-wrap { border-radius: 0; }
 
   /* ── Responsive ── */
@@ -499,6 +540,12 @@
       <span class="live-dot"></span>
       LIVE
     </div>
+  </div>
+
+  <!-- Stream URL bar -->
+  <div class="url-bar" id="urlBar">
+    <input type="text" id="streamUrlInput" placeholder="Paste .m3u8 stream URL here..." value="https://saseries.akamaized.net/hls/live/2110097/ICCt20-tapmad/hdntl=exp=1770821787~acl=%2f*~data=hdntl~hmac=4aaad7bae407105a35f792ec2db423927042858610c6c25c7e4a67575dec7ddb/level_0.m3u8">
+    <button id="loadStreamBtn">▶ Load Stream</button>
   </div>
 
   <!-- Player -->
@@ -634,7 +681,7 @@
 
 <script>
 (() => {
-  const STREAM_URL = 'https://saseries.akamaized.net/hls/live/2110097/ICCt20-tapmad/hdntl=exp=1770820277~acl=%2f*~data=hdntl~hmac=1165f00a1025e1fb9e2a7a97e17d690cac9a17da38984f3efa7c9cecc95f39e9/level_0.m3u8';
+  const STREAM_URL = 'https://saseries.akamaized.net/hls/live/2110097/ICCt20-tapmad/hdntl=exp=1770821787~acl=%2f*~data=hdntl~hmac=4aaad7bae407105a35f792ec2db423927042858610c6c25c7e4a67575dec7ddb/level_0.m3u8';
 
   const $ = id => document.getElementById(id);
   const video = $('video');
@@ -672,23 +719,35 @@
   let hls = null;
   let controlsTimeout = null;
   let isLive = true;
+  let currentStreamUrl = STREAM_URL;
+
+  // ── URL bar ──
+  const streamUrlInput = $('streamUrlInput');
+  $('loadStreamBtn').addEventListener('click', () => {
+    const url = streamUrlInput.value.trim();
+    if (url && url.endsWith('.m3u8')) {
+      currentStreamUrl = url;
+      initPlayer();
+    }
+  });
+  streamUrlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('loadStreamBtn').click();
+  });
 
   // ── HLS Setup ──
   function initPlayer() {
     errorOverlay.classList.remove('visible');
     loadingOverlay.classList.add('visible');
+    streamUrlInput.value = currentStreamUrl;
 
     if (Hls.isSupported()) {
       if (hls) hls.destroy();
       hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        xhrSetup: (xhr) => {
-          xhr.setRequestHeader('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36');
-        }
       });
 
-      hls.loadSource(STREAM_URL);
+      hls.loadSource(currentStreamUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (e, data) => {
@@ -714,7 +773,7 @@
       });
 
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = STREAM_URL;
+      video.src = currentStreamUrl;
       video.addEventListener('loadedmetadata', () => {
         loadingOverlay.classList.remove('visible');
       });
