@@ -111,24 +111,6 @@
   .share-btn svg { width: 14px; height: 14px; fill: currentColor; }
   .share-btn.copied { color: var(--accent); border-color: rgba(0,200,150,0.3); }
 
-  .orientation-btn {
-    display: none;
-    align-items: center; gap: 5px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid var(--border);
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-    font-family: inherit;
-  }
-  .orientation-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
-  .orientation-btn svg { width: 14px; height: 14px; fill: currentColor; }
-  .orientation-btn.active { color: var(--accent); border-color: rgba(0,200,150,0.3); }
-
   .live-pill {
     display: flex; align-items: center; gap: 6px;
     background: rgba(255,59,79,0.12);
@@ -436,7 +418,6 @@
     .top-right { gap: 6px; }
     .live-pill { padding: 3px 8px; font-size: 10px; }
     .share-btn { padding: 3px 8px; font-size: 10px; }
-    .orientation-btn { display: flex; padding: 3px 8px; font-size: 10px; }
     .bottom-bar { padding: 6px 10px; gap: 8px; }
     .controls { padding: 0 10px 10px; }
     .big-play-btn { width: 64px; height: 64px; }
@@ -480,11 +461,6 @@
       </div>
     </div>
     <div class="top-right">
-      <!-- Orientation toggle (mobile only) -->
-      <button class="orientation-btn" id="orientationBtn" title="Switch vertical/horizontal">
-        <svg viewBox="0 0 24 24"><path d="M16 1H8C6.34 1 5 2.34 5 4v16c0 1.66 1.34 3 3 3h8c1.66 0 3-1.34 3-3V4c0-1.66-1.34-3-3-3zm-2 20h-4v-1h4v1zm3.25-3H6.75V4h10.5v14z"/></svg>
-        <span id="orientationLabel">Vertical</span>
-      </button>
       <!-- Share -->
       <button class="share-btn" id="shareBtn" title="Share">
         <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
@@ -623,16 +599,9 @@
 <script>
 (() => {
   // ── Stream URLs ──
-  const STREAMS = {
-    horizontal: 'https://premierleagpl23.akamaized.net/hls/live/2107108/Tapmad-25852-Seriea-1.2/master.m3u8',
-    vertical: 'https://premierleagpl23.akamaized.net/hls/live/2107108/Tapmad-25852-Seriea-1.2/master.m3u8'
-    // To use a separate vertical stream, replace the vertical URL above, e.g.:
-    // vertical: 'https://premierleagpl23.akamaized.net/hls/live/2107108/tapmad3121250-vertical/master.m3u8'
-  };
+  const STREAM_URL = 'https://premierleagpl23.akamaized.net/hls/live/2107108/Tapmad-25852-Seriea-1.2/level_0.m3u8';
 
   const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent);
-  let isVertical = isMobile; // Default to vertical on mobile
-  let currentStream = isVertical ? STREAMS.vertical : STREAMS.horizontal;
 
   const $ = id => document.getElementById(id);
   const video = $('video');
@@ -698,31 +667,6 @@
     }
   });
 
-  // ── Orientation toggle ──
-  const orientationBtn = $('orientationBtn');
-  const orientationLabel = $('orientationLabel');
-
-  function updateOrientationUI() {
-    orientationLabel.textContent = isVertical ? 'Vertical' : 'Horizontal';
-    orientationBtn.classList.toggle('active', isVertical);
-    video.style.objectFit = isVertical ? 'cover' : 'contain';
-  }
-
-  orientationBtn.addEventListener('click', () => {
-    isVertical = !isVertical;
-    currentStream = isVertical ? STREAMS.vertical : STREAMS.horizontal;
-    updateOrientationUI();
-    // If streams are different, reload
-    if (STREAMS.vertical !== STREAMS.horizontal) {
-      initPlayer();
-      showToast(isVertical ? 'Switched to vertical stream' : 'Switched to horizontal stream');
-    } else {
-      showToast(isVertical ? 'Vertical mode' : 'Horizontal mode');
-    }
-  });
-
-  updateOrientationUI();
-
   // ── HLS Setup ──
   function initPlayer() {
     errorOverlay.classList.remove('visible');
@@ -735,7 +679,7 @@
         lowLatencyMode: true,
       });
 
-      hls.loadSource(currentStream);
+      hls.loadSource(STREAM_URL);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (e, data) => {
@@ -761,7 +705,7 @@
       });
 
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = currentStream;
+      video.src = STREAM_URL;
       video.addEventListener('loadedmetadata', () => {
         loadingOverlay.classList.remove('visible');
       });
