@@ -626,7 +626,11 @@
     'Server A': 'https://premierleagpl23.akamaized.net/hls/live/2107108/tapmad3121250/master.m3u8',
     'Server B': 'https://premierleagpl23.akamaized.net/hls/live/2107108/Tapmad-25852-Seriea-1.2/master.m3u8'
   };
-  let STREAM_URL = Object.values(STREAM_URLS)[0];
+
+  // Pick server from URL param or default to first
+  const urlParams = new URLSearchParams(window.location.search);
+  const savedServer = urlParams.get('server') || Object.keys(STREAM_URLS)[0];
+  let STREAM_URL = STREAM_URLS[savedServer] || Object.values(STREAM_URLS)[0];
 
   const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent);
 
@@ -698,14 +702,15 @@
   const streamSelect = $('streamSelect');
   Object.entries(STREAM_URLS).forEach(([name, url], i) => {
     const opt = document.createElement('option');
-    opt.value = url;
+    opt.value = name;
     opt.textContent = name;
+    if (name === savedServer) opt.selected = true;
     streamSelect.appendChild(opt);
   });
   streamSelect.addEventListener('change', () => {
-    STREAM_URL = streamSelect.value;
-    initPlayer();
-    showToast('Switched to ' + streamSelect.options[streamSelect.selectedIndex].text);
+    const params = new URLSearchParams(window.location.search);
+    params.set('server', streamSelect.value);
+    window.location.search = params.toString();
   });
 
   // ── HLS Setup ──
