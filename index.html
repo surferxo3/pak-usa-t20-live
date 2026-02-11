@@ -461,6 +461,14 @@
       </div>
     </div>
     <div class="top-right">
+      <!-- Stream switcher -->
+      <div class="stream-switch-wrap" style="position:relative">
+        <button class="share-btn" id="streamSwitchBtn" title="Switch Stream">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+          Stream
+        </button>
+        <div class="quality-menu" id="streamMenu" style="min-width:140px"></div>
+      </div>
       <!-- Share -->
       <button class="share-btn" id="shareBtn" title="Share">
         <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
@@ -599,7 +607,12 @@
 <script>
 (() => {
   // ── Stream URLs ──
-  const STREAM_URL = 'https://premierleagpl23.akamaized.net/hls/live/2107108/Tapmad-25852-Seriea-1.2/level_0.m3u8';
+  // ── Stream URLs ──
+  const STREAM_URLS = {
+    'Stream 1': 'https://premierleagpl23.akamaized.net/hls/live/2107108/tapmad3121250/master.m3u8',
+    'Stream 2': 'https://premierleagpl23.akamaized.net/hls/live/2107108/Tapmad-25852-Seriea-1.2/master.m3u8'
+  };
+  let STREAM_URL = Object.values(STREAM_URLS)[0];
 
   const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent);
 
@@ -667,6 +680,34 @@
     }
   });
 
+  // ── Stream Switcher ──
+  const streamMenu = $('streamMenu');
+  const streamSwitchBtn = $('streamSwitchBtn');
+
+  Object.entries(STREAM_URLS).forEach(([name, url], i) => {
+    const opt = document.createElement('button');
+    opt.className = 'quality-opt' + (i === 0 ? ' active' : '');
+    opt.innerHTML = `<span class="check">${i === 0 ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</span><span class="q-label">${name}</span>`;
+    opt.addEventListener('click', () => {
+      STREAM_URL = url;
+      initPlayer();
+      showToast('Switched to ' + name);
+      streamMenu.querySelectorAll('.quality-opt').forEach((o, j) => {
+        const active = o === opt;
+        o.classList.toggle('active', active);
+        o.querySelector('.check').innerHTML = active ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
+      });
+      streamMenu.classList.remove('open');
+    });
+    streamMenu.appendChild(opt);
+  });
+
+  streamSwitchBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    streamMenu.classList.toggle('open');
+  });
+  document.addEventListener('click', () => streamMenu.classList.remove('open'));
+
   // ── HLS Setup ──
   function initPlayer() {
     errorOverlay.classList.remove('visible');
@@ -690,7 +731,7 @@
       hls.on(Hls.Events.ERROR, (e, data) => {
         if (data.fatal) {
           loadingOverlay.classList.remove('visible');
-          errorMsg.textContent = `Stream error: ${data.details || 'Unknown'}. The stream may be unavailable.`;
+          errorMsg.textContent = `Stream error: ${data.details || 'Unknown'}. Try switching stream.`;
           errorOverlay.classList.add('visible');
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
             setTimeout(() => hls.startLoad(), 3000);
