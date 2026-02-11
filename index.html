@@ -111,6 +111,26 @@
   .share-btn svg { width: 14px; height: 14px; fill: currentColor; }
   .share-btn.copied { color: var(--accent); border-color: rgba(0,200,150,0.3); }
 
+  .stream-select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236e6e82'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 22px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .stream-select:hover, .stream-select:focus { background: rgba(255,255,255,0.1); color: var(--text); outline: none; }
+
   .live-pill {
     display: flex; align-items: center; gap: 6px;
     background: rgba(255,59,79,0.12);
@@ -418,6 +438,7 @@
     .top-right { gap: 6px; }
     .live-pill { padding: 3px 8px; font-size: 10px; }
     .share-btn { padding: 3px 8px; font-size: 10px; }
+    .stream-select { padding: 3px 8px; font-size: 10px; padding-right: 18px; }
     .bottom-bar { padding: 6px 10px; gap: 8px; }
     .controls { padding: 0 10px 10px; }
     .big-play-btn { width: 64px; height: 64px; }
@@ -462,13 +483,7 @@
     </div>
     <div class="top-right">
       <!-- Stream switcher -->
-      <div class="stream-switch-wrap" style="position:relative">
-        <button class="share-btn" id="streamSwitchBtn" title="Switch Stream">
-          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
-          Stream
-        </button>
-        <div class="quality-menu" id="streamMenu" style="min-width:140px"></div>
-      </div>
+      <select class="stream-select" id="streamSelect" title="Switch Server"></select>
       <!-- Share -->
       <button class="share-btn" id="shareBtn" title="Share">
         <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
@@ -606,11 +621,10 @@
 
 <script>
 (() => {
-  // ── Stream URLs ──
-  // ── Stream URLs ──
+  // ── Stream URLs (add/remove servers here) ──
   const STREAM_URLS = {
-    'Stream 1': 'https://premierleagpl23.akamaized.net/hls/live/2107108/tapmad3121250/master.m3u8',
-    'Stream 2': 'https://premierleagpl23.akamaized.net/hls/live/2107108/Tapmad-25852-Seriea-1.2/master.m3u8'
+    'Server A': 'https://premierleagpl23.akamaized.net/hls/live/2107108/tapmad3121250/master.m3u8',
+    'Server B': 'https://premierleagpl23.akamaized.net/hls/live/2107108/Tapmad-25852-Seriea-1.2/master.m3u8'
   };
   let STREAM_URL = Object.values(STREAM_URLS)[0];
 
@@ -681,32 +695,18 @@
   });
 
   // ── Stream Switcher ──
-  const streamMenu = $('streamMenu');
-  const streamSwitchBtn = $('streamSwitchBtn');
-
+  const streamSelect = $('streamSelect');
   Object.entries(STREAM_URLS).forEach(([name, url], i) => {
-    const opt = document.createElement('button');
-    opt.className = 'quality-opt' + (i === 0 ? ' active' : '');
-    opt.innerHTML = `<span class="check">${i === 0 ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</span><span class="q-label">${name}</span>`;
-    opt.addEventListener('click', () => {
-      STREAM_URL = url;
-      initPlayer();
-      showToast('Switched to ' + name);
-      streamMenu.querySelectorAll('.quality-opt').forEach((o, j) => {
-        const active = o === opt;
-        o.classList.toggle('active', active);
-        o.querySelector('.check').innerHTML = active ? '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
-      });
-      streamMenu.classList.remove('open');
-    });
-    streamMenu.appendChild(opt);
+    const opt = document.createElement('option');
+    opt.value = url;
+    opt.textContent = name;
+    streamSelect.appendChild(opt);
   });
-
-  streamSwitchBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    streamMenu.classList.toggle('open');
+  streamSelect.addEventListener('change', () => {
+    STREAM_URL = streamSelect.value;
+    initPlayer();
+    showToast('Switched to ' + streamSelect.options[streamSelect.selectedIndex].text);
   });
-  document.addEventListener('click', () => streamMenu.classList.remove('open'));
 
   // ── HLS Setup ──
   function initPlayer() {
